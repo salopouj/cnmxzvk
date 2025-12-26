@@ -1,0 +1,2 @@
+# cnmxzvk
+For open
