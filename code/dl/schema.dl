@@ -1,0 +1,78 @@
+#include "types.dl"
+
+.decl TransferFlow(
+    tx: TxHash,
+    idx: Index,
+    src: Address,
+    dst: Address,
+    amt: Amount
+)
+.input TransferFlow
+
+.decl TransferContext(
+    tx: TxHash,
+    idx: Index,
+    token_addr: Address, 
+    params: String,      
+    status: Status       
+)
+.input TransferContext
+
+.decl AccountProp(
+    addr: Address,
+    type: AccountType   
+)
+.input AccountProp
+
+.decl TxMeta(
+    tx: TxHash,
+    chain_id: ChainID,   
+    height: BlockHeight, 
+    info_tx: String,     
+    ts: Timestamp
+)
+.input TxMeta
+
+.decl CEXInfo(
+    addr: Address,
+    is_deposit_wallet: BooleanStr, 
+    is_supported_asset: BooleanStr,
+    is_valid_binding: BooleanStr   
+)
+.input CEXInfo
+
+.decl ChainConfiguration(
+    chain_id: ChainID,
+    chain_name: ChainName,
+    is_evm: BooleanStr,
+    is_utxo: BooleanStr,
+    is_move: BooleanStr,
+    native_token_symbol: AssetSymbol
+)
+.input ChainConfiguration
+
+.decl AssetWhitelist(
+    chain_id: ChainID,
+    token_addr: Address,
+    symbol: AssetSymbol,
+    decimals: number,
+    standard: AssetStandard
+)
+.input AssetWhitelist
+
+.decl DepositWalletConfiguration(
+    addr: Address,
+    chain_id: ChainID,
+    user_id: UserID,
+    creation_time: Timestamp,
+    status: symbol
+)
+.input DepositWalletConfiguration
+
+.decl HotWalletConfiguration(
+    addr: Address,
+    chain_id: ChainID,
+    role: WalletRole,
+    max_balance: Amount
+)
+.input HotWalletConfiguration
