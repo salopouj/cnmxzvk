@@ -1,0 +1,59 @@
+#include "logic_base.dl"
+
+.decl ExtractMeta(info_string: String, token: Address, claimed_dst: Address, claimed_amt: Amount)
+.input ExtractMeta 
+
+.decl TxInfo(tx: TxHash, token: Address, dst: Address, m_amt: Amount)
+TxInfo(tx, token, dst, m_amt) :-
+    TxMeta(tx, _, _, info_tx, _),
+    ExtractMeta(info_tx, token, dst, m_amt).
+
+.decl ValidInFlow(tx: TxHash, token: Address, dst: Address, amt: Amount)
+ValidInFlow(tx, token, dst, amt) :-
+    TransferFlow(tx, idx, _, dst, amt),
+    IsCEXDst(dst),
+    IsSuccess(tx, idx),
+    TransferContext(tx, idx, token, _, _),
+    IsSupported(token).
+
+.decl InSum(tx: TxHash, token: Address, dst: Address, r_amt: Amount)
+InSum(tx, token, dst, total_credited) :-
+    TxInfo(tx, token, dst, _),
+    total_credited = sum amt : {
+        ValidInFlow(tx, token, dst, amt)
+    }.
+
+.decl IsPartialPaymentContext(tx: TxHash)
+IsPartialPaymentContext(tx) :-
+    TxMeta(tx, _, _, info_tx, _),
+    contains("PartialPayment", info_tx).
+
+.decl DAC_Violation(tx: TxHash, claimed: Amount, actual: Amount, sub_type: StrategyType)
+.output DAC_Violation
+
+DAC_Violation(tx, claimed, actual, "AmountMismatch") :-
+    InSum(tx, token, dst, actual),
+    TxInfo(tx, token, dst, claimed),
+    claimed > actual,
+    (claimed - actual) > 0.000001,
+    !IsPartialPaymentContext(tx).
+
+DAC_Violation(tx, claimed, actual, "PartialPaymentExploit") :-
+    InSum(tx, token, dst, actual),
+    TxInfo(tx, token, dst, claimed),
+    claimed > actual,
+    IsPartialPaymentContext(tx).
+
+DAC_Violation(tx, claimed, actual, "ZeroValueAttack") :-
+    TxInfo(tx, _, _, claimed),
+    claimed > 0.0,
+    InSum(tx, _, _, actual),
+    actual = 0.0.
+
+DAC_Violation(tx, claimed, actual, "GenericDiscrepancy") :-
+    InSum(tx, token, dst, actual),
+    TxInfo(tx, token, dst, claimed),
+    claimed > actual,
+    (claimed - actual) > 0.000001,
+    !IsPartialPaymentContext(tx),
+    actual > 0.0.
