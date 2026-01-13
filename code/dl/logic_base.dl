@@ -1,0 +1,95 @@
+#include "schema.dl"
+
+.decl RawStatusMapper(raw: Status, normalized: BooleanStr)
+RawStatusMapper("true", "true").
+RawStatusMapper("success", "true").
+RawStatusMapper("1", "true").
+RawStatusMapper("0x1", "true").
+RawStatusMapper("false", "false").
+RawStatusMapper("failed", "false").
+RawStatusMapper("revert", "false").
+RawStatusMapper("0", "false").
+RawStatusMapper("0x0", "false").
+RawStatusMapper("out_of_gas", "false").
+RawStatusMapper("execution_reverted", "false").
+
+.decl IsSuccess(tx: TxHash, idx: Index)
+IsSuccess(tx, idx) :-
+    TransferContext(tx, idx, _, _, raw_status),
+    RawStatusMapper(raw_status, "true").
+
+.decl IsFailed(tx: TxHash, idx: Index)
+IsFailed(tx, idx) :-
+    TransferContext(tx, idx, _, _, raw_status),
+    RawStatusMapper(raw_status, "false").
+
+.decl IsContract(addr: Address)
+IsContract(addr) :-
+    AccountProp(addr, "Contract").
+
+.decl IsEOA(addr: Address)
+IsEOA(addr) :-
+    AccountProp(addr, "EOA").
+
+.decl IsCEXDst(addr: Address)
+IsCEXDst(addr) :-
+    CEXInfo(addr, "true", _, _).
+
+.decl IsCEXSrc(addr: Address)
+IsCEXSrc(addr) :-
+    CEXInfo(addr, "true", _, _).
+
+.decl IsSupported(token: Address)
+IsSupported(token) :-
+    CEXInfo(token, _, "true", _).
+
+.decl IsValidBinding(dst: Address)
+IsValidBinding(dst) :-
+    CEXInfo(dst, _, _, "true").
+
+.decl IsEVMChain(chain_id: ChainID)
+IsEVMChain(id) :-
+    ChainConfiguration(id, _, "true", _, _, _).
+
+.decl IsUTXOChain(chain_id: ChainID)
+IsUTXOChain(id) :-
+    ChainConfiguration(id, _, _, "true", _, _).
+
+.decl IsSolanaChain(chain_id: ChainID)
+IsSolanaChain(id) :-
+    ChainConfiguration(id, "Solana", _, _, _, _).
+
+.decl IsTonChain(chain_id: ChainID)
+IsTonChain(id) :-
+    ChainConfiguration(id, "TON", _, _, _, _).
+
+.decl TxChainMapper(tx: TxHash, chain_id: ChainID)
+TxChainMapper(tx, cid) :-
+    TxMeta(tx, cid, _, _, _).
+
+.decl IsNativeTransfer(tx: TxHash, idx: Index)
+IsNativeTransfer(tx, idx) :-
+    TransferFlow(tx, idx, _, _, _),
+    TransferContext(tx, idx, token, _, _),
+    token = "0x0000000000000000000000000000000000000000".
+
+.decl IsTokenTransfer(tx: TxHash, idx: Index)
+IsTokenTransfer(tx, idx) :-
+    TransferFlow(tx, idx, _, _, _),
+    TransferContext(tx, idx, token, _, _),
+    token != "0x0000000000000000000000000000000000000000".
+
+.decl FlowInvolvedAddress(tx: TxHash, addr: Address)
+FlowInvolvedAddress(tx, src) :- TransferFlow(tx, _, src, _, _).
+FlowInvolvedAddress(tx, dst) :- TransferFlow(tx, _, _, dst, _).
+
+.decl EffectiveTransfer(tx: TxHash, idx: Index, src: Address, dst: Address, amt: Amount)
+EffectiveTransfer(tx, idx, src, dst, amt) :-
+    TransferFlow(tx, idx, src, dst, amt),
+    IsSuccess(tx, idx),
+    amt > 0.0.
+
+.decl DepositCandidate(tx: TxHash, idx: Index, dst: Address, amt: Amount)
+DepositCandidate(tx, idx, dst, amt) :-
+    EffectiveTransfer(tx, idx, _, dst, amt),
+    IsCEXDst(dst).
