@@ -36,6 +36,11 @@ TSC_Violation(tx, 0, "0x0000", "Brc20InvalidScript") :-
     IsCEXDst(dst),
     amt > 0.0.
 
-TSC_Violation(tx, idx, any_src, "GenericExecutionFailure") :-
+TSC_Violation(tx, idx, any_src, "InternalRevert") :-
     ContractMaskedFailure(tx, idx, any_src),
     !GasGriefingCandidate(tx, idx).
+
+TSC_Violation(tx, idx, any_src, "GenericExecutionFailure") :-
+    ContractMaskedFailure(tx, idx, any_src),
+    !GasGriefingCandidate(tx, idx),
+    !Brc20ScriptFailure(tx).
