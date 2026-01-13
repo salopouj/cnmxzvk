@@ -1,0 +1,48 @@
+#include "logic_base.dl"
+
+.decl TokenMetadata(token: Address, symbol: AssetSymbol, name: String)
+.input TokenMetadata
+
+.decl CodeHash(addr: Address, hash: HexString)
+.input CodeHash
+
+.decl AAC_Violation(tx: TxHash, fake_token: Address, dst: Address, sub_type: StrategyType)
+.output AAC_Violation
+
+.decl UnsupportedAssetFlow(tx: TxHash, token: Address, dst: Address)
+UnsupportedAssetFlow(tx, token, dst) :-
+    TransferFlow(tx, idx, _, dst, amt),
+    TransferContext(tx, idx, token, _, _),
+    !IsSupported(token),
+    IsSuccess(tx, idx),
+    IsCEXDst(dst),
+    amt > 0.0.
+
+.decl SymbolSpoofing(tx: TxHash, fake_token: Address, real_token: Address)
+SymbolSpoofing(tx, fake_token, real_token) :-
+    UnsupportedAssetFlow(tx, fake_token, _),
+    TokenMetadata(fake_token, fake_sym, _),
+    AssetWhitelist(_, real_token, real_sym, _, _),
+    fake_sym = real_sym,
+    fake_token != real_token.
+
+.decl FakeCodeHash(tx: TxHash, fake_token: Address)
+FakeCodeHash(tx, fake_token) :-
+    UnsupportedAssetFlow(tx, fake_token, _),
+    CodeHash(fake_token, c_hash),
+    AssetWhitelist(_, real_token, _, _, _),
+    CodeHash(real_token, c_hash),
+    fake_token != real_token.
+
+AAC_Violation(tx, token, dst, "UnsupportedAsset") :-
+    UnsupportedAssetFlow(tx, token, dst),
+    !SymbolSpoofing(tx, token, _),
+    !FakeCodeHash(tx, token).
+
+AAC_Violation(tx, token, dst, "SymbolSpoofing") :-
+    UnsupportedAssetFlow(tx, token, dst),
+    SymbolSpoofing(tx, token, _).
+
+AAC_Violation(tx, token, dst, "FakeContractLogic") :-
+    UnsupportedAssetFlow(tx, token, dst),
+    FakeCodeHash(tx, token).
