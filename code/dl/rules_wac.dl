@@ -1,0 +1,58 @@
+#include "logic_base.dl"
+
+.decl WAC_Violation(tx: TxHash, src: Address, amt: Amount, sub_type: StrategyType)
+.output WAC_Violation
+
+.decl DirectOutboundViolation(tx: TxHash, src: Address, amt: Amount)
+DirectOutboundViolation(tx, src, amt) :-
+    TransferFlow(tx, idx, src, dst, amt),
+    IsCEXSrc(src),
+    IsSuccess(tx, idx),
+    amt > 0.0,
+    !IsCEXDst(dst),
+    !HotWalletConfiguration(dst, _, _, _),
+    !DepositWalletConfiguration(dst, _, _, _, _).
+
+.decl SolanaAuthorityHijack(tx: TxHash, account: Address)
+SolanaAuthorityHijack(tx, account) :-
+    TxMeta(tx, cid, _, _, _),
+    IsSolanaChain(cid),
+    TransferContext(tx, _, _, "SetAuthority", "true"),
+    TransferFlow(tx, _, attacker, account, _),
+    !IsCEXSrc(attacker),
+    IsCEXDst(account).
+
+.decl SuspiciousApproval(tx: TxHash, owner: Address, spender: Address)
+SuspiciousApproval(tx, owner, spender) :-
+    TransferContext(tx, _, token, "approve", "true"),
+    IsSupported(token),
+    IsCEXSrc(owner),
+    !IsCEXDst(spender),
+    !HotWalletConfiguration(spender, _, _, _).
+
+.decl ApprovalFrontRunning(tx: TxHash, owner: Address)
+ApprovalFrontRunning(tx, owner) :-
+    SuspiciousApproval(tx, owner, spender),
+    TransferFlow(tx, _, owner, spender, amt),
+    amt > 0.0.
+
+WAC_Violation(tx, src, amt, "DirectOutbound") :-
+    DirectOutboundViolation(tx, src, amt),
+    TransferContext(tx, _, token, _, _),
+    IsSupported(token).
+
+WAC_Violation(tx, account, 0.0, "AuthorityHijack") :-
+    SolanaAuthorityHijack(tx, account).
+
+WAC_Violation(tx, owner, 0.0, "ApprovalAbuse") :-
+    ApprovalFrontRunning(tx, owner).
+
+WAC_Violation(tx, src, amt, "GenericUnauthorizedFlow") :-
+    TransferFlow(tx, idx, src, dst, amt),
+    IsCEXSrc(src),
+    IsSuccess(tx, idx),
+    amt > 0.0,
+    !IsCEXDst(dst),
+    !DirectOutboundViolation(tx, src, amt),
+    !SolanaAuthorityHijack(tx, src),
+    !ApprovalFrontRunning(tx, src).
