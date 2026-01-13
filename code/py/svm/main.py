@@ -429,7 +429,7 @@ if __name__ == "__main__":
     manifest = TrainingJobManifest(
         job_id=str(uuid.uuid4()),
         model_version="v4.2.0-rc1",
-        data_source_path="/data/warehouse/cex/transactions/historical",
+        data_source_path="/data/---/transactions/historical",
         data_format=DataFormat.PARQUET,
         hyperparameters_grid={"nu": [0.001, 0.01，0.1，0.5], "gamma": ["scale", 0.1，0.01]},
         validation_split_ratio=0.1,
