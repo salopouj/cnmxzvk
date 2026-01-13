@@ -1,0 +1,25 @@
+// ==========================================================
+// MODULE: Main Entry Point
+// ==========================================================
+#include "03_rule_wac.dl"
+#include "04_rule_dac.dl"
+#include "05_rule_aac.dl"
+#include "06_rule_tsc.dl"
+
+// Summary Report Relation
+.decl MoT_Alert(tx: TxHash, type: String, severity: String, details: String)
+.output MoT_Alert
+
+// Aggregating all violations into a unified alert system
+
+MoT_Alert(tx, "WAC", "Critical", cat(strategy, " detected on deposit wallet")) :-
+    WAC_Violation(tx, _, strategy).
+
+MoT_Alert(tx, "DAC", "High", cat("Amount mismatch: ", msg)) :-
+    DAC_Violation(tx, _, _, _, msg).
+
+MoT_Alert(tx, "AAC", "High", cat("Fake Asset detected: ", type)) :-
+    AAC_Violation(tx, _, type).
+
+MoT_Alert(tx, "TSC", "Medium", cat("Invalid Status: ", strategy)) :-
+    TSC_Violation(tx, strategy).
