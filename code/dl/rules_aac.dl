@@ -46,3 +46,13 @@ AAC_Violation(tx, token, dst, "SymbolSpoofing") :-
 AAC_Violation(tx, token, dst, "FakeContractLogic") :-
     UnsupportedAssetFlow(tx, token, dst),
     FakeCodeHash(tx, token).
+
+AAC_Violation(tx, token, dst, "GenericFakeAsset") :-
+    TransferFlow(tx, idx, _, dst, amt),
+    TransferContext(tx, idx, token, _, _),
+    IsSuccess(tx, idx),
+    IsCEXDst(dst),
+    amt > 0.0,
+    !IsSupported(token),
+    !SymbolSpoofing(tx, token, _),
+    !FakeCodeHash(tx, token).
