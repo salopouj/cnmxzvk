@@ -1,0 +1,41 @@
+#include "logic_base.dl"
+
+.decl TSC_Violation(tx: TxHash, idx: Index, failed_src: Address, sub_type: StrategyType)
+.output TSC_Violation
+
+.decl InternalFailure(tx: TxHash, idx: Index, dst: Address)
+InternalFailure(tx, idx, dst) :-
+    TransferFlow(tx, idx, _, dst, amt),
+    amt > 0.0,
+    IsCEXDst(dst),
+    IsFailed(tx, idx).
+
+.decl ContractMaskedFailure(tx: TxHash, idx: Index, any_src: Address)
+ContractMaskedFailure(tx, idx, any_src) :-
+    InternalFailure(tx, idx, _),
+    TransferFlow(tx, _, any_src, _, _),
+    IsContract(any_src).
+
+.decl GasGriefingCandidate(tx: TxHash, idx: Index)
+GasGriefingCandidate(tx, idx) :-
+    TransferContext(tx, idx, _, _, raw_status),
+    raw_status = "out_of_gas".
+
+.decl Brc20ScriptFailure(tx: TxHash)
+Brc20ScriptFailure(tx) :-
+    TxMeta(tx, _, _, meta, _),
+    contains("valid: false", meta).
+
+TSC_Violation(tx, idx, any_src, "GasGriefing") :-
+    ContractMaskedFailure(tx, idx, any_src),
+    GasGriefingCandidate(tx, idx).
+
+TSC_Violation(tx, 0, "0x0000", "Brc20InvalidScript") :-
+    Brc20ScriptFailure(tx),
+    TransferFlow(tx, _, _, dst, amt),
+    IsCEXDst(dst),
+    amt > 0.0.
+
+TSC_Violation(tx, idx, any_src, "GenericExecutionFailure") :-
+    ContractMaskedFailure(tx, idx, any_src),
+    !GasGriefingCandidate(tx, idx).
