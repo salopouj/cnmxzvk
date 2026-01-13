@@ -9,6 +9,21 @@ Before running the project, ensure you have the following installed:
 * **Soufflé** (For Datalog logic analysis)
 * **Java / Go** (For specific chain clients, if applicable)
 
+---
+
+## 📂 Project Structure
+
+```text
+MOT/
+├── code/                  # Main source code
+│   ├── py/                # python code  
+│   ├── dl/                # Datalog code
+├── data/                  # Dataset of MOT
+└── README.md              # Project documentation
+
+```
+---
+
 🚀 Quick Start
 
 ### Run Code
