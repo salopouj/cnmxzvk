@@ -33,7 +33,7 @@ cd ./code/py/xxx.py
 python xxx.py
 
 cd ./code/dl/yyy.dl
-souffle -F deposit_facts -D yyy.dl
+souffle -F TxSM_facts -D yyy.dl
 
 ```
 
